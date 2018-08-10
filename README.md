@@ -18,6 +18,7 @@ Dependency Injection:
 GraphQL:
 * https://www.npmjs.com/package/react-apollo
 * https://github.com/atomicobject/ts-react-graphql-starter-kit/blob/master/package.json
+* https://medium.com/@shemseddine/setup-a-graphql-api-using-asp-net-core-79f1b88f6ad8
 
 ORM:
 * https://github.com/typeorm/typeorm
