@@ -1,0 +1,35 @@
+{
+  "name": "entity_metadata",
+  "version": "1.0.0",
+  "main": "src/index.ts",
+  "license": "MIT",
+  "scripts": {
+    "test": "mocha -r ts-node/register src/**/*.spec.ts",
+    "watch": "npm run test -- --watch-extensions ts --watch -R min",
+    "dev": "parcel index.html -p 4000",
+    "build": "parcel build ./index.html --public-url /"
+  },
+  "dependencies": {
+    "@material-ui/core": "^1.5.1",
+    "@types/chai": "^4.1.4",
+    "@types/mocha": "^5.2.5",
+    "@types/react": "^16.4.12",
+    "@types/react-dom": "latest",
+    "@types/reflect-metadata": "^0.1.0",
+    "chai": "^4.1.2",
+    "formstate": "^1.0.2",
+    "io-ts": "^1.3.0",
+    "io-ts-derive-class": "file://../io-ts-derive-class",
+    "mobx": "^5.0.4",
+    "mobx-react": "^5.2.5",
+    "mocha": "^5.2.0",
+    "react": "latest",
+    "react-dom": "latest",
+    "reflect-metadata": "^0.1.12",
+    "ts-node": "^7.0.0",
+    "typescript": "^3.0.1"
+  },
+  "devDependencies": {
+    "parcel-bundler": "^1.9.7"
+  }
+}

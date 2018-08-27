@@ -1,4 +1,7 @@
 
+Schema
+* https://github.com/gcanti/io-ts
+
 Decorators  
 * https://spin.atomicobject.com/2017/04/24/typescript-modular-typesafe-metadata/  
 * https://blog.wizardsoftheweb.pro/typescript-decorators-reflection/  
@@ -22,4 +25,8 @@ GraphQL:
 
 ORM:
 * https://github.com/typeorm/typeorm
+
+Forms:
+* https://www.npmjs.com/package/formstate
+* https://github.com/gcanti/tcomb-form
 

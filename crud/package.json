@@ -1,0 +1,12 @@
+{
+  "name": "crud",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "scripts": {
+    "generate": "typeorm-model-generator -h ntsrv73\\dcstage -d MMS -e mssql -o ./models --ssl true -u EntityGenerator -x fn1rDciRAIVtwRjZV3Uu"
+  },
+  "dependencies": {
+    "typeorm-model-generator": "^0.2.19"
+  }
+}
