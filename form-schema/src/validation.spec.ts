@@ -1,8 +1,9 @@
 import { expect } from 'chai';
 import 'mocha';
 
-import * as t from 'io-ts';
 import * as m from 'io-ts-derive-class'
+import * as t from 'io-ts';
+
 
 import { register, validate } from './validation'
 
@@ -51,7 +52,7 @@ register<PersonAddress>(PersonAddress, {
 
 describe('Can validate Person', () => {
     it('FirstName is required', async () => {
-        const person = new Person({});
+        const person = new Person();
         const result = await validate(person);
         
         expect(result).to.have.property("FirstName");
@@ -62,9 +63,8 @@ describe('Can validate Person', () => {
     });
 
     it('LastName is required', async () => {
-        const person = new Person({});
+        const person = new Person();
         const result = await validate(person);
-        console.log(result);
         
         expect(result).to.have.property("LastName");
         if(result.LastName){
@@ -74,9 +74,8 @@ describe('Can validate Person', () => {
     });
 
     it('Address StreetAddress1 is required', async () => {
-        const person = new Person({});
+        const person = new Person();
         const result = await validate(person);
-        console.log(result);
         
         expect(result).to.have.property("Address");
         if(result.Address && result.Address.StreetAddress1){
@@ -86,9 +85,8 @@ describe('Can validate Person', () => {
     });
 
     it('Must have at least one address', async () => {
-        const person = new Person({});
+        const person = new Person();
         const result = await validate(person);
-        console.log(result);
         
         expect(result).to.have.property("Addresses");
         if(result.Addresses){
@@ -99,10 +97,9 @@ describe('Can validate Person', () => {
     });
 
     it('First address must have StreetAddress1', async () => {
-        const person = new Person({});
+        const person = new Person();
         person.Addresses.push(new PersonAddress());
         const result = await validate(person);
-        console.log(result);
         
         expect(result).to.have.property("Addresses");
         expect(result.Addresses).length(1);
@@ -118,10 +115,9 @@ describe('Can validate Person', () => {
     });
 
     it('First SecondaryAddress must have StreetAddress1 equal to Test', async () => {
-        const person = new Person({});
+        const person = new Person();
         person.SecondaryAddresses.push(new PersonAddress());
         const result = await validate(person);
-        console.log(result);
         
         expect(result).to.have.property("SecondaryAddresses");
         expect(result.SecondaryAddresses).length(1);

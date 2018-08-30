@@ -1,6 +1,9 @@
 import * as schema from './types'
 import 'reflect-metadata'
 
+import * as t from 'io-ts'
+import * as tdc from 'io-ts-derive-class'
+
 function getTarget(target:any): any {
     return target.prototype === undefined ? target.constructor : target;
 }
@@ -15,32 +18,38 @@ export function Field() {
     }
 }
 
-const get_schema_for_value = (target: any, key: string, ): schema.FormGroupSchema | schema.UIField => {
-    const value = target[key];
-    if(typeof value === "string" || value instanceof String) {
-        return new schema.UIField(key, new schema.StringType(), false, new schema.TextField());
+const get_schema_for_value = (key: string, type: t.Type<any>): schema.FormGroupSchema | schema.UIField | null => {
+    const tag = (type as any)['_tag'];
+    const tagContains = (search: string) => tag && tag.length > 0 ? tag.indexOf(search) != -1 : false;
+
+    if(tag === "StringType"){
+        return new schema.UIField(key, t.string, schema.TextField);
     }
 
-    if(typeof value === "number" || value instanceof Number) {
-        return new schema.UIField(key, new schema.NumberType(), false, new schema.TextField());
+    if(tag === "InterfaceType") {
+        //return new schema.FormGroupSchema()
     }
 
-    if(typeof value === "boolean" || value instanceof Boolean) {
-        return new schema.UIField(key, new schema.BooleanType(), false, new schema.CheckboxField());
-    }
-
-    return deriveFormSchema(value);
+    return null;
 }
 
 
-export function deriveFormSchema(target: any) : schema.FormGroupSchema {
-    const names = Object.getOwnPropertyNames(target);
-    var children = names.map(key => {
-        //var t = Reflect.getMetadata("design:type", target, key);
-        return get_schema_for_value(target, key);
-    });
+export function deriveFormSchema<T>(target: tdc.Constructor<tdc.ITyped<T>>) : schema.FormGroupSchema {
+    let getType = (target as any).getType;
+    if(!getType)
+    {
+        throw 'Cannot derive form schema from entity without type data!';
+    }
 
-    const name = target.constructor.name.toString();
+    const type = getType() as t.InterfaceType<any>;
+    if(!type)
+    {
+        throw 'Cannot derive form schema from entity without type data!';
+    }
 
-    return new schema.FormGroupSchema(name, children);
+    const children = Object.keys(type.props).map((key: string) => {
+        return get_schema_for_value(key, type.props[key]);
+    }).filter((c:schema.FormGroupSchema | schema.UIField | null) => c !== null) as Array<schema.FormGroupSchema | schema.UIField>;
+
+    return new schema.FormGroupSchema(target.name, children);
 }

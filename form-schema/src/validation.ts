@@ -5,8 +5,12 @@ type ValidatorResult = string | null | Promise<string | null>;
 
 const VALIDATION_METADATA_KEY = "VALIDATION_METADATA_KEY";
 
+interface IValidator<T> {
+    (model: T): ValidatorResult;
+}
+
 type ValidationModel<T> = {
-    [P in keyof T]?: (model: T) => ValidatorResult | Array<(model: T) => ValidatorResult>;
+    [P in keyof T]?: IValidator<T> | Array<IValidator<T>>;
 }
 
 type ValidatorEntryProps<T> = {
@@ -79,10 +83,6 @@ export async function validate<T>(model: T): Promise<ValidationResult<T>> {
         current.errors.push(res);
         result[key] = current;
     }
-
-    const containsKey = (key: string) => {
-        return !!result[key];
-    };
 
     const validators = getValidatorsFor<T>(target);
 

@@ -3,14 +3,13 @@ import * as ReactDOM from 'react-dom';
 
 import { TestForm } from './test-form'
 import { TestDeriveForm } from './test-derive'
+import { PersonForm } from './test-form-state'
 
 class App extends React.Component {
     render() {
         return (
             <div>
-                <TestForm />
-
-                <TestDeriveForm />
+                <PersonForm />
             </div>
         )
     }

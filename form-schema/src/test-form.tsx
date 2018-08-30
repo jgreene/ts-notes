@@ -1,12 +1,13 @@
 import * as React from 'react'
 
+import * as t from 'io-ts';
 import * as schema from './types'
 import { DynamicForm } from './dynamic-form'
 
 const TestFormSchema = new schema.FormGroupSchema("Test Form", [
-    new schema.UIField("ID", new schema.IntType(), false, new schema.TextField(), new schema.DisabledStatus()),
-    new schema.UIField("FirstName", new schema.StringType(), true, new schema.TextField()),
-    new schema.UIField("LastName", new schema.StringType(), true, new schema.TextField()),
+    new schema.UIField("ID", t.number, schema.TextField),
+    new schema.UIField("FirstName", t.string, schema.TextField, true),
+    new schema.UIField("LastName", t.string, schema.TextField, true),
 ])
 
 export class TestForm extends React.Component<{}, {}> {

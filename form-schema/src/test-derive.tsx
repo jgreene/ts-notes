@@ -6,32 +6,26 @@ import { deriveFormSchema, Entity, Field } from './derive'
 
 import { register } from './validation'
 
-@Entity
-class PersonAddress {
-    @Field()
-    StreetAddress1: String = '';
-    @Field()
-    StreetAddress2: String = '';
-}
+import * as t from 'io-ts'
+import * as tdc from 'io-ts-derive-class'
 
-@Entity
-class Person {
-    @Field()
-    ID: number = 0;
-    @Field()
-    FirstName: string = '';
-    @Field()
-    LastName: string = '';
+const PersonAddressType = t.type({
+    StreetAddress1: t.string,
+    StreetAddress2: t.string,
+})
 
-    @Field()
-    Address: PersonAddress = new PersonAddress();
+class PersonAddress extends tdc.DeriveClass(PersonAddressType) {}
 
-    constructor(part: Partial<Person>) {
-        Object.assign(this, part);
-    }
-}
+const PersonType = t.type({
+    ID: t.number,
+    FirstName: t.string,
+    LastName: t.string,
+    Address: tdc.ref(PersonAddress)
+})
 
-const PersonSchema = deriveFormSchema(new Person({}));
+class Person extends tdc.DeriveClass(PersonType) {} 
+
+const PersonSchema = deriveFormSchema(Person);
 
 export class TestDeriveForm extends React.Component<{}, {}> {
     render() {

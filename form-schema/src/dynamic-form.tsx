@@ -14,7 +14,7 @@ const get_ui_field = (field: schema.UIField) => {
     var value = get_default_value(field);
     var fieldState = new FieldState<any>(value);
     return fieldState;
-}
+};
 
 const get_schema_state = (child: schema.FormGroupSchema | schema.UIField) => {
     if(child instanceof schema.FormGroupSchema){
@@ -64,9 +64,9 @@ export class DynamicField extends React.Component<DynamicFieldProps, {}> {
     }
 
     get_element() {
-        const ui_type = this.props.schema.ui_type;
-        const isDisabled = this.props.schema.status !== undefined && this.props.schema.status instanceof schema.DisabledStatus;
-        if(ui_type instanceof schema.TextField) {
+        const ui_type = this.props.schema.ui;
+        const isDisabled = this.props.schema.disabled;
+        if(ui_type.value === schema.TextField.value) {
             return (<TextField 
                         disabled={isDisabled}
                         label={this.props.schema.name} 
