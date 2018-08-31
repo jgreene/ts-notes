@@ -1,8 +1,7 @@
-import { observe, autorun, observable, action, runInAction, computed } from 'mobx';
+import { observe, autorun, observable, action, runInAction, computed, reaction, extendObservable, intercept } from 'mobx';
 
 export type InputState<TValue> = {
     value: TValue;
-    onChange(newValue: TValue): void;
     errors: string[];
     visible: boolean;
     disabled: boolean;
@@ -14,6 +13,8 @@ export type InputState<TValue> = {
     setErrors(errors: string[]): void;
     setVisibility(visible: boolean): void;
     setDisabled(disabled: boolean): void;
+    setRequired(required: boolean): void;
+    onChange(newValue: TValue): void;
 };
 
 type primitive = string | number | boolean | null | undefined;
@@ -22,15 +23,18 @@ export type FormStateType<T> = {
     [P in keyof T]: T[P] extends Function ? never :
                     T[P] extends primitive ? InputState<T[P]> :
                     T[P] extends Array<infer U> ? U extends primitive ? InputState<InputState<U>[]> : InputState<FormState<U>[]> :
-                    FormState<T[P]>;
+                    InputState<FormStateType<T[P]>>;
 }
 
 export type ModelState<T> = {
-    [P in keyof T]: T[P];
+    [P in keyof T]: T[P] extends Function ? never :
+                    T[P] extends primitive ? T[P] :
+                    T[P] extends Array<infer U> ? U extends primitive ? U[] : ModelState<U>[] :
+                    ModelState<T[P]>
 }
 
 interface IFormModel<T> {
-    getFormModel(): ModelState<T>;
+    readonly model: ModelState<T>;
 }
 
 export type FormState<T> = InputState<FormStateType<T>> & IFormModel<T>
@@ -66,9 +70,7 @@ function getInputState(input: any, parent: any = null, path: string = ''): any
             record[k] = getInputState(value, record, path + '.' + k);
         });
 
-        const res = getInputStateImpl(record, parent, path) as any;
-        res.getFormModel = function() { return getFormModel(this); }
-        return res;
+        return getInputStateImpl(record, parent, path) as any;
     }
 
     throw 'Could not create inputstate from ' + JSON.stringify(input);
@@ -77,6 +79,14 @@ function getInputState(input: any, parent: any = null, path: string = ''): any
 export function deriveFormState<T extends object>(input: T): FormState<T> {
     const state = getInputState(input);
     const obs = observable(state);
+    extendObservable(obs, {
+        get model() { return getFormModel<T>(this as any); }
+    })
+
+    observe(obs, "model", (change) => {
+        console.log(change);
+        return change;
+    });
     return obs;
 }
 

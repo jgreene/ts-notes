@@ -77,7 +77,7 @@ describe('Person formstate', () => {
         const state = deriveFormState(person);
         const street1 = '123 Test St';
         state.value.Address.value.StreetAddress1.onChange(street1);
-        const model = state.getFormModel();
+        const model = state.model;
         Object.keys(person).forEach(k => {
             expect(model).to.have.property(k);
         });
@@ -90,6 +90,7 @@ describe('Person formstate', () => {
             expect(true).eq(false);
         }
 
+        
         expect(model.Address.StreetAddress1).eq(street1);
         expect(person2.Address.StreetAddress1).eq(street1);
     })

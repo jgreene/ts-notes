@@ -43,7 +43,7 @@ class PersonFormState {
             fetch.then(p => {
                 this.state = deriveFormState(p);
                 spy((change) => {
-                    console.log(change);
+                    //console.log(change);
                     return change;
                 })
             })
