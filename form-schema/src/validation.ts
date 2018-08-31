@@ -49,7 +49,7 @@ type ValidationArray<T> = Array<T> & {
 }
 
 export type ValidationResult<T> = {
-    [P in keyof T]?: T[P] extends string ? string[] :
+    [P in keyof T]: T[P] extends string ? string[] :
                      T[P] extends number ? string[] :
                      T[P] extends boolean ? string[] :
                      T[P] extends undefined ? string[] :

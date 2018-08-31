@@ -1,4 +1,4 @@
-import { observable, action, runInAction, computed } from 'mobx';
+import { observe, autorun, observable, action, runInAction, computed } from 'mobx';
 
 export type RecordState = {
     errors: string[];
@@ -7,6 +7,7 @@ export type RecordState = {
     dirty: boolean;
     touched: boolean;
     required: boolean;
+    path: string;
 
     setErrors(errors: string[]): void;
     setVisibility(visible: boolean): void;
@@ -26,42 +27,49 @@ type primitive = string | number | boolean | null | undefined;
 
 export type FormStateType<T> = {
     [P in keyof T]: T[P] extends primitive ? InputState<T[P]> :
-                    T[P] extends Array<infer U> ? Array<FormStateType<U>> & IInputState :
+                    T[P] extends Array<infer U> ? InputState<FormStateType<U>[]> :
                     T[P] extends Function ? never :
                     FormState<T[P]>;
 }
 
-export type FormState<T> = FormStateType<T> & IInputState;
+export type ModelState<T> = {
+    [P in keyof T]: T[P];
+}
+
+interface IFormModel<T> {
+    getFormModel(): ModelState<T>;
+}
+
+export type FormState<T> = FormStateType<T> & IInputState & IFormModel<T>
 
 export type Constructor<T = {}> = new (...args: any[]) => T;
 
-function getInputState(input: any): any
+function getInputState(input: any, parent: any = null, path: string = ''): any
 {
     if(typeof input === "string")
     {
-        return new InputStateImpl(input) as any;
+        return getInputStateImpl(input, parent, path) as any;
     }
 
     if(typeof input === "boolean")
     {
-        return new InputStateImpl(input) as any;
+        return getInputStateImpl(input, parent, path) as any;
     }
 
     if(typeof input === "number")
     {
-        return new InputStateImpl(input) as any;
+        return getInputStateImpl(input, parent, path) as any;
     }
     
     if(input === null)
     {
-        return new InputStateImpl(null) as any;
+        return getInputStateImpl(input, parent, path) as any;
     }
 
-    if(input instanceof Array)
+    if(input instanceof Array || Array.isArray(input))
     {
-        const res: any = input.map((i: any) => getInputState(i));
-        res.inputState = new InputStateImpl(input);
-        return res;
+        const res: any = input.map((entry: any, i: number) => getInputState(entry, input, path + '.value[' + i + ']'));
+        return getInputStateImpl(res, parent, path) as any;
     }
 
     const keys = Object.keys(input);
@@ -69,11 +77,12 @@ function getInputState(input: any): any
         const res:any = {};
         keys.forEach(k => {
             const value: any = input[k];
-            res[k] = getInputState(value);
+            res[k] = getInputState(value, res, path + '.' + k);
         });
 
-        const inputState = new InputStateImpl(input);
+        const inputState = getInputStateImpl(input, parent, path) as any;
         res.inputState = inputState;
+        res.getFormModel = function() { return getFormModel(this); }
         return res;
     }
 
@@ -81,7 +90,88 @@ function getInputState(input: any): any
 }
 
 export function deriveFormState<T extends object>(input: T): FormState<T> {
-    return observable(getInputState(input));
+    return getInputState(input);
+}
+
+function getInputModel(input: any): any {
+    if(input instanceof Array || Array.isArray(input)){
+        return input.map((i: any) => getInputModel(i));
+    }
+
+    if(input.isInputStateImpl){
+        return input.value;
+    }
+
+    const keys = Object.keys(input);
+    if(keys.length > 0){
+        const res:any = {};
+        keys.forEach(k => {
+            if(k !== 'inputState' && k !== 'getFormModel'){
+                const value: any = input[k];
+                res[k] = getInputModel(value);
+            }
+        });
+
+        return res;
+    }
+
+    throw 'Could not create input model from ' + JSON.stringify(input);
+}
+
+export function getFormModel<T>(state: FormState<T>): ModelState<T> {
+    return getInputModel(state);
+}
+
+function getInputStateImpl<T>(input: T, parent: any, path: string): InputState<T> {
+    var errors: string[] = [];
+    var res = {
+        isInputStateImpl: true,
+        value: input,
+        errors: errors,
+        visible: false,
+        disabled: false,
+        dirty: false,
+        touched: false,
+        required: false,
+        path: path,
+
+        setErrors(errors: string[]) {
+            runInAction(() => {
+                this.errors = errors;
+            })
+            
+        },
+        setVisibility(visible: boolean) {
+            runInAction(() => {
+                this.visible = visible;
+            });
+        },
+
+        setDisabled(disabled: boolean) {
+            runInAction(() => {
+                this.disabled = disabled;
+            });
+        },
+    
+        setRequired(required: boolean) {
+            runInAction(() => {
+                this.required = required;
+            });
+        },
+    
+        /** On change on the component side */
+        onChange(value: T) {
+            runInAction(() => {
+            // Store local old value for onDidChange
+                const oldValue = this.value;
+                // Immediately set for local ui binding
+                this.value = value;
+        
+                this.dirty = true;
+            });
+        }
+    }
+    return res;
 }
 
 class InputStateImpl<TValue> {

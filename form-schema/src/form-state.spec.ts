@@ -21,20 +21,16 @@ const AddressType = t.type({
 
 class Address extends tdc.DeriveClass(AddressType) {}
 
-const TestTupleType = t.tuple([t.string, t.number])
-
 const PersonType = t.type({
     ID: t.Integer,
     FirstName: t.string,
     LastName: t.string,
     MiddleName: t.union([t.string, t.null]),
     Address: tdc.ref(Address),
-    Addresses: t.array(tdc.ref(Address)),
-    Tuple: TestTupleType
+    Addresses: t.array(tdc.ref(Address))
 });
 
 class Person extends tdc.DeriveClass(PersonType) {}
-
 
 class PersonFormState {
     constructor(public state: FormState<Person>){
@@ -77,4 +73,39 @@ describe('Person formstate', () => {
         expect(personFormState.FullName).eq('NewFirst Last');
         const personInputState = state.inputState;
     });
+
+    it('Can get form model', async () => {
+        let person = new Person({ FirstName: 'First', LastName: 'Last'});
+        const state = deriveFormState(person);
+        const street1 = '123 Test St';
+        state.Address.StreetAddress1.onChange(street1);
+        const model = state.getFormModel();
+        Object.keys(person).forEach(k => {
+            expect(model).to.have.property(k);
+        });
+        
+        expect(model.FirstName).eq('First');
+
+        const person2 = new Person(model);
+
+        if(!(person2.Address instanceof Address)){
+            expect(true).eq(false);
+        }
+
+        expect(model.Address.StreetAddress1).eq(street1);
+        expect(person2.Address.StreetAddress1).eq(street1);
+    })
+
+    it('Can get path for state', async () => {
+        let address = new Address({ StreetAddress1: 'Test Street1'});
+        let person = new Person({ FirstName: 'Test', Address: address});
+        person.Addresses.push(address);
+        person.Addresses.push(address);
+        const state = deriveFormState(person);
+        
+        expect(state.Address.StreetAddress1.path).eq('.Address.StreetAddress1');
+        expect(state.Addresses.path).eq('.Addresses');
+        expect(state.Addresses.value[0].StreetAddress1.path).eq('.Addresses.value[0].StreetAddress1');
+        expect(state.Addresses.value[1].StreetAddress1.path).eq('.Addresses.value[1].StreetAddress1');
+    })
 });

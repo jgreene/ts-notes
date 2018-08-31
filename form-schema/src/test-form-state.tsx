@@ -3,9 +3,9 @@ import * as React from 'react'
 import * as t from 'io-ts';
 import * as tdc from 'io-ts-derive-class'
 
-import { deriveFormState, FormState, InputState } from './form-state'
+import { deriveFormState, getFormModel, FormState, InputState } from './form-state'
 
-import { observable, action, runInAction, computed } from 'mobx';
+import { observable, autorun, action, runInAction, computed, intercept, observe, spy } from 'mobx';
 import { observer } from "mobx-react"
 import { FormGroup, FormLabel, FormControlLabel, TextField, Typography, Button } from '@material-ui/core';
 
@@ -41,8 +41,11 @@ class PersonFormState {
     constructor(public fetch: Promise<Person>){
         runInAction(() => {
             fetch.then(p => {
-                    this.state = deriveFormState(p);
-                    console.log(this.state);
+                this.state = deriveFormState(p);
+                spy((change) => {
+                    console.log(change);
+                    return change;
+                })
             })
         })
     }
@@ -52,7 +55,9 @@ class PersonFormState {
     }
 
     onSubmit() {
-        console.log(this.state);
+        const model = getFormModel(this.state);
+        const person = new Person(model);
+        console.log(person);
     }
 }
 
@@ -108,7 +113,7 @@ export class PersonForm extends React.Component<{}, {}> {
                     <TextInputField label="Street Address1" state={this.form.state.Address.StreetAddress1} />
                     <TextInputField label="Street Address2" state={this.form.state.Address.StreetAddress2} />
 
-                    <Button variant="contained" color="primary">
+                    <Button variant="contained" color="primary" onClick={(e: any) => this.form.onSubmit()}>
                         Submit
                     </Button>
 
