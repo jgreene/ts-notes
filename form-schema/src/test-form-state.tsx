@@ -51,7 +51,7 @@ class PersonFormState {
     }
 
     @computed get FullName() {
-        return this.state.FirstName.value + ' ' + this.state.LastName.value;
+        return this.state.value.FirstName.value + ' ' + this.state.value.LastName.value;
     }
 
     onSubmit() {
@@ -102,16 +102,16 @@ export class PersonForm extends React.Component<{}, {}> {
                         Person Form
                     </Typography>
 
-                    <TextInputField label="First Name" state={this.form.state.FirstName} />
-                    <TextInputField label="Last Name" state={this.form.state.LastName} />
+                    <TextInputField label="First Name" state={this.form.state.value.FirstName} />
+                    <TextInputField label="Last Name" state={this.form.state.value.LastName} />
 
                     <FormLabel>Full Name</FormLabel>
                     <Typography  gutterBottom>
                         {this.form.FullName}
                     </Typography>
 
-                    <TextInputField label="Street Address1" state={this.form.state.Address.StreetAddress1} />
-                    <TextInputField label="Street Address2" state={this.form.state.Address.StreetAddress2} />
+                    <TextInputField label="Street Address1" state={this.form.state.value.Address.value.StreetAddress1} />
+                    <TextInputField label="Street Address2" state={this.form.state.value.Address.value.StreetAddress2} />
 
                     <Button variant="contained" color="primary" onClick={(e: any) => this.form.onSubmit()}>
                         Submit

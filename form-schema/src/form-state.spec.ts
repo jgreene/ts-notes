@@ -38,7 +38,7 @@ class PersonFormState {
     }
 
     @computed get FullName() {
-        return this.state.FirstName.value + ' ' + this.state.LastName.value;
+        return this.state.value.FirstName.value + ' ' + this.state.value.LastName.value;
     }
 }
 
@@ -47,8 +47,8 @@ describe('Person formstate', () => {
         let person = new Person({ FirstName: 'Test'});
         const state = deriveFormState(person);
 
-        expect(state).to.have.property("FirstName");
-        expect(state.FirstName.value).eq('Test');
+        expect(state.value).to.have.property("FirstName");
+        expect(state.value.FirstName.value).eq('Test');
     });
 
     it('StreetAddress1 matches in derived state', async () => {
@@ -56,7 +56,7 @@ describe('Person formstate', () => {
         let person = new Person({ FirstName: 'Test', Address: address});
         const state = deriveFormState(person);
 
-        expect(state.Address.StreetAddress1.value).eq(address.StreetAddress1);
+        expect(state.value.Address.value.StreetAddress1.value).eq(address.StreetAddress1);
     });
 
     it('FullName is calculated properly', async () => {
@@ -64,21 +64,19 @@ describe('Person formstate', () => {
         const state = deriveFormState(person);
         let personFormState = new PersonFormState(state);
 
-
         expect(personFormState).to.have.property("FullName");
         expect(personFormState.FullName).eq('First Last');
 
-        state.FirstName.onChange('NewFirst');
-        expect(state.FirstName.value).eq('NewFirst');
+        state.value.FirstName.onChange('NewFirst');
+        expect(state.value.FirstName.value).eq('NewFirst');
         expect(personFormState.FullName).eq('NewFirst Last');
-        const personInputState = state.inputState;
     });
 
     it('Can get form model', async () => {
         let person = new Person({ FirstName: 'First', LastName: 'Last'});
         const state = deriveFormState(person);
         const street1 = '123 Test St';
-        state.Address.StreetAddress1.onChange(street1);
+        state.value.Address.value.StreetAddress1.onChange(street1);
         const model = state.getFormModel();
         Object.keys(person).forEach(k => {
             expect(model).to.have.property(k);
@@ -103,9 +101,9 @@ describe('Person formstate', () => {
         person.Addresses.push(address);
         const state = deriveFormState(person);
         
-        expect(state.Address.StreetAddress1.path).eq('.Address.StreetAddress1');
-        expect(state.Addresses.path).eq('.Addresses');
-        expect(state.Addresses.value[0].StreetAddress1.path).eq('.Addresses.value[0].StreetAddress1');
-        expect(state.Addresses.value[1].StreetAddress1.path).eq('.Addresses.value[1].StreetAddress1');
+        expect(state.value.Address.value.StreetAddress1.path).eq('.Address.StreetAddress1');
+        expect(state.value.Addresses.path).eq('.Addresses');
+        expect(state.value.Addresses.value[0].value.StreetAddress1.path).eq('.Addresses[0].StreetAddress1');
+        expect(state.value.Addresses.value[1].value.StreetAddress1.path).eq('.Addresses[1].StreetAddress1');
     })
 });

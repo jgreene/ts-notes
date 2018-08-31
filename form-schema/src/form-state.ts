@@ -1,6 +1,8 @@
 import { observe, autorun, observable, action, runInAction, computed } from 'mobx';
 
-export type RecordState = {
+export type InputState<TValue> = {
+    value: TValue;
+    onChange(newValue: TValue): void;
     errors: string[];
     visible: boolean;
     disabled: boolean;
@@ -14,21 +16,12 @@ export type RecordState = {
     setDisabled(disabled: boolean): void;
 };
 
-export type InputState<TValue> = {
-    value: TValue;
-    onChange(newValue: TValue): void;
-} & RecordState;
-
-export interface IInputState {
-    inputState: RecordState;
-}
-
 type primitive = string | number | boolean | null | undefined;
 
 export type FormStateType<T> = {
-    [P in keyof T]: T[P] extends primitive ? InputState<T[P]> :
-                    T[P] extends Array<infer U> ? InputState<FormStateType<U>[]> :
-                    T[P] extends Function ? never :
+    [P in keyof T]: T[P] extends Function ? never :
+                    T[P] extends primitive ? InputState<T[P]> :
+                    T[P] extends Array<infer U> ? U extends primitive ? InputState<InputState<U>[]> : InputState<FormState<U>[]> :
                     FormState<T[P]>;
 }
 
@@ -40,48 +33,40 @@ interface IFormModel<T> {
     getFormModel(): ModelState<T>;
 }
 
-export type FormState<T> = FormStateType<T> & IInputState & IFormModel<T>
+export type FormState<T> = InputState<FormStateType<T>> & IFormModel<T>
 
 export type Constructor<T = {}> = new (...args: any[]) => T;
 
+function isPrimitive(input: any): input is primitive {
+    return typeof input === "string"
+        || typeof input === "boolean"
+        || typeof input === "number"
+        || input === null
+        || input === undefined;
+}
+
 function getInputState(input: any, parent: any = null, path: string = ''): any
 {
-    if(typeof input === "string")
-    {
-        return getInputStateImpl(input, parent, path) as any;
-    }
-
-    if(typeof input === "boolean")
-    {
-        return getInputStateImpl(input, parent, path) as any;
-    }
-
-    if(typeof input === "number")
-    {
-        return getInputStateImpl(input, parent, path) as any;
-    }
-    
-    if(input === null)
+    if(isPrimitive(input))
     {
         return getInputStateImpl(input, parent, path) as any;
     }
 
     if(input instanceof Array || Array.isArray(input))
     {
-        const res: any = input.map((entry: any, i: number) => getInputState(entry, input, path + '.value[' + i + ']'));
+        const res: any = input.map((entry: any, i: number) => getInputState(entry, input, path + '[' + i + ']'));
         return getInputStateImpl(res, parent, path) as any;
     }
 
     const keys = Object.keys(input);
     if(keys.length > 0){
-        const res:any = {};
+        const record:any = {};
         keys.forEach(k => {
             const value: any = input[k];
-            res[k] = getInputState(value, res, path + '.' + k);
+            record[k] = getInputState(value, record, path + '.' + k);
         });
 
-        const inputState = getInputStateImpl(input, parent, path) as any;
-        res.inputState = inputState;
+        const res = getInputStateImpl(record, parent, path) as any;
         res.getFormModel = function() { return getFormModel(this); }
         return res;
     }
@@ -90,23 +75,30 @@ function getInputState(input: any, parent: any = null, path: string = ''): any
 }
 
 export function deriveFormState<T extends object>(input: T): FormState<T> {
-    return getInputState(input);
+    const state = getInputState(input);
+    const obs = observable(state);
+    return obs;
 }
 
 function getInputModel(input: any): any {
-    if(input instanceof Array || Array.isArray(input)){
-        return input.map((i: any) => getInputModel(i));
+    if(isPrimitive(input))
+    {
+        return input;
     }
 
     if(input.isInputStateImpl){
-        return input.value;
+        return getInputModel(input.value);
+    }
+
+    if(input instanceof Array || Array.isArray(input)){
+        return input.map((i: any) => getInputModel(i));
     }
 
     const keys = Object.keys(input);
     if(keys.length > 0){
         const res:any = {};
         keys.forEach(k => {
-            if(k !== 'inputState' && k !== 'getFormModel'){
+            if(k !== 'getFormModel'){
                 const value: any = input[k];
                 res[k] = getInputModel(value);
             }
@@ -123,8 +115,12 @@ export function getFormModel<T>(state: FormState<T>): ModelState<T> {
 }
 
 function getInputStateImpl<T>(input: T, parent: any, path: string): InputState<T> {
-    var errors: string[] = [];
-    var res = {
+    const errors: string[] = [];
+    const run = (func: () => void) => {
+        runInAction(func);
+    };
+
+    const res = {
         isInputStateImpl: true,
         value: input,
         errors: errors,
@@ -136,32 +132,32 @@ function getInputStateImpl<T>(input: T, parent: any, path: string): InputState<T
         path: path,
 
         setErrors(errors: string[]) {
-            runInAction(() => {
+            run(() => {
                 this.errors = errors;
             })
             
         },
         setVisibility(visible: boolean) {
-            runInAction(() => {
+            run(() => {
                 this.visible = visible;
             });
         },
 
         setDisabled(disabled: boolean) {
-            runInAction(() => {
+            run(() => {
                 this.disabled = disabled;
             });
         },
     
         setRequired(required: boolean) {
-            runInAction(() => {
+            run(() => {
                 this.required = required;
             });
         },
     
         /** On change on the component side */
         onChange(value: T) {
-            runInAction(() => {
+            run(() => {
             // Store local old value for onDidChange
                 const oldValue = this.value;
                 // Immediately set for local ui binding
@@ -172,76 +168,4 @@ function getInputStateImpl<T>(input: T, parent: any, path: string): InputState<T
         }
     }
     return res;
-}
-
-class InputStateImpl<TValue> {
-    @observable value: TValue;
-    @observable errors: string[] = [];
-    @observable visible: boolean = true;
-    @observable disabled: boolean = false;
-    @observable dirty: boolean = false;
-    @observable touched: boolean = false;
-    @observable required: boolean = false;
-
-    constructor(private _initValue: TValue) {
-        runInAction(() => {
-            this.value = _initValue;
-        })
-    }
-    
-    @action setErrors(errors: string[]) {
-        this.errors = errors;
-    }
-
-    @action setVisibility(visible: boolean) {
-        this.visible = visible;
-    }
-
-    @action setDisabled(disabled: boolean) {
-        this.disabled = disabled;
-    }
-
-    @action setRequired(required: boolean) {
-        this.required = required;
-    }
-
-    protected _onUpdate: (state: InputStateImpl<TValue>) => any;
-
-    @action public onUpdate = (handler: (state: InputStateImpl<TValue>) => any) => {
-        this._onUpdate = handler;
-        return this;
-    }
-
-    @action protected executeOnUpdate = () => {
-        this._onUpdate && this._onUpdate(this);
-    }
-
-    /**
-        * Allows you to take actions in your code based on `value` changes caused by user interactions
-    */
-    protected _onDidChange: (config: { newValue: TValue, oldValue: TValue }) => any;
-
-    @action public onDidChange = (handler: (config: { newValue: TValue, oldValue: TValue }) => any) => {
-        this._onDidChange = handler;
-        return this;
-    }
-
-    @action protected executeOnDidChange = (config: { newValue: TValue, oldValue: TValue }) => {
-        this._onDidChange && this._onDidChange(config);
-    }
-
-    /** On change on the component side */
-    @action
-    onChange = (value: TValue) => {
-        // Store local old value for onDidChange
-        const oldValue = this.value;
-        // Immediately set for local ui binding
-        this.value = value;
-
-        // Call on did change if any
-        this.executeOnDidChange({ newValue: value, oldValue });
-
-        this.dirty = true;
-        this.executeOnUpdate();
-    }
 }
