@@ -23,26 +23,54 @@ interface IValidator<T> {
     (model: T): ValidatorResult;
 }
 
+export abstract class FieldValidator {
+    readonly tag: string = 'FieldValidator'
+    abstract validate(value: any): ValidatorResult;
+}
+
+function isFieldValidator(input: any): input is FieldValidator {
+    return input['tag'] === 'FieldValidator';
+}
+
 type ValidationModel<T> = {
-    [P in keyof T]?: IValidator<T> | Array<IValidator<T>>;
+    [P in keyof T]?: FieldValidator | IValidator<T> | Array<FieldValidator | IValidator<T>>;
 }
 
 type ValidatorEntryProps<T> = {
-    [P in keyof T]?: Array<(model: T) => ValidatorResult>;
+    [P in keyof T]?: Array<FieldValidator | IValidator<T>>;
 }
 
 function getValidatorsFor<T>(klass: new (...args: any[]) => T) : ValidatorEntryProps<T> {
     return Reflect.getMetadata(VALIDATION_METADATA_KEY, klass) as ValidatorEntryProps<T> || {};
 }
 
+class RequiredValidator extends FieldValidator {
+    constructor(public message: string) {
+        super();
+    }
+
+    validate(value: any) {
+        if(value === null || value === undefined){
+            return this.message;
+        }
+
+        if(typeof value === "string" && value.length < 1){
+            return this.message;
+        }
+
+        return null;
+    }
+}
+
+export const required = (message: string = 'is required') => new RequiredValidator(message);
+
 export function register<T>(
     klass: new (...args: any[]) => T,
     map: ValidationModel<T>
 ): void  {
     const currentMap: any = getValidatorsFor<T>(klass);
-
     for(const prop in map) {
-        const currentValidators = (currentMap[prop] || []) as Array<(model: T) => ValidatorResult>;
+        const currentValidators = (currentMap[prop] || []) as Array<FieldValidator | IValidator<T>>;
         const mapped = map[prop];
         if(mapped instanceof Array){
             mapped.forEach(m => {
@@ -118,10 +146,10 @@ export async function validate<T extends tdc.ITyped<any>>(model: T, validationPa
         }
         const propValue = model[key];
         const isArray = propValue instanceof Array;
-        const propValidators = validators[key] as Array<(model: T) => ValidatorResult>;
+        const propValidators = validators[key] as Array<FieldValidator | IValidator<T>>;
         for(var i = 0; i < propValidators.length; i++){
             const v = propValidators[i];
-            var res = v(model);
+            var res = isFieldValidator(v) ? v.validate(model[key]) : v(model);
             if(res instanceof Promise){
                 res = await res;
             }
@@ -163,9 +191,7 @@ export async function validate<T extends tdc.ITyped<any>>(model: T, validationPa
             for(var k = 0; k < propValue.length; k++){
                 const item = propValue[k];
                 const innerResult = await validate(item, validationPath, path + key + '[' + k + ']' + '.');
-                if(Object.keys(innerResult).length > 0){
-                    arrayRes.push(innerResult);
-                }
+                arrayRes.push(innerResult);
             }
             
             if(!arrayRes.errors){

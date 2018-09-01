@@ -1,11 +1,11 @@
 import { expect } from 'chai';
 import 'mocha';
 
-import * as m from 'io-ts-derive-class'
+import * as m from 'io-ts-derive-class';
 import * as t from 'io-ts';
 
 
-import { register, validate } from './validation'
+import { register, validate, required } from './validation'
 
 const PersonAddressType = t.type({
     StreetAddress1: t.string,
@@ -27,7 +27,7 @@ class Person extends m.DeriveClass(PersonType) {}
 
 
 register<Person>(Person, {
-    FirstName: (p) => p.FirstName == null || p.FirstName.length < 1 ? "FirstName is required" : null,
+    FirstName: required('FirstName is required'),
     LastName: (p) => new Promise<string | null>(resolve => {
         setTimeout(() => {
             resolve((p.LastName == null || p.LastName.length < 1 ? "LastName is required" : null))
@@ -47,8 +47,8 @@ register<Person>(Person, {
 });
 
 register<PersonAddress>(PersonAddress, {
-    StreetAddress1: (a) => a.StreetAddress1 == null || a.StreetAddress1.length < 1 ? "StreetAddress1 is required" : null,
-    StreetAddress2: (a) => a.StreetAddress2 == null || a.StreetAddress2.length < 1 ? "StreetAddress2 is required" : null,
+    StreetAddress1: required("StreetAddress1 is required"),
+    StreetAddress2: required("StreetAddress2 is required"),
 });
 
 describe('Can validate Person', () => {
@@ -150,7 +150,7 @@ describe('Can validate Person', () => {
         person.SecondaryAddresses.push(new PersonAddress());
         const result = await validate(person, '.SecondaryAddresses[0].StreetAddress1');
         expect(result).to.have.property("SecondaryAddresses");
-        expect(result.SecondaryAddresses).length(1);
+        expect(result.SecondaryAddresses).length(person.SecondaryAddresses.length);
         expect(result.SecondaryAddresses.errors).length(1);
         expect(result.SecondaryAddresses.errors[0]).eq("First StreetAddress1 must equal Test");
     });

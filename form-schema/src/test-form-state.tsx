@@ -3,13 +3,13 @@ import * as React from 'react'
 import * as t from 'io-ts';
 import * as tdc from 'io-ts-derive-class'
 
-import { deriveFormState, getFormModel, FormState, InputState } from './form-state'
+import { deriveFormState, FormState, InputState } from './form-state'
 
-import { observable, autorun, action, runInAction, computed, intercept, observe, spy } from 'mobx';
+import { observable, runInAction, computed } from 'mobx';
 import { observer } from "mobx-react"
 import { FormGroup, FormLabel, FormControlLabel, TextField, Typography, Button, FormHelperText } from '@material-ui/core';
 
-import { register } from './validation'
+import { register, required } from './validation'
 
 const CityType = t.type({
     ID: t.number,
@@ -41,6 +41,7 @@ var count = 0;
 
 register<Person>(Person, {
     FirstName: [
+        required(),
         (p) => p.FirstName.length > 8 ? "may not be longer than 8 characters!" : null, 
         (p) => p.FirstName.length > 10 ? "may not be longer than 10 characters!" : null
     ],
@@ -53,6 +54,10 @@ register<Person>(Person, {
             }, 3000);
         })
     ]
+});
+
+register<Address>(Address, {
+    StreetAddress1: required()
 })
 
 class PersonFormState {
@@ -71,8 +76,7 @@ class PersonFormState {
     }
 
     onSubmit() {
-        const model = getFormModel(this.state);
-        const person = new Person(model);
+        const person = this.state.model;
         console.log(person);
     }
 }
@@ -112,7 +116,10 @@ class TextInputField extends React.Component<InputProps<any>, {}> {
 @observer
 export class PersonForm extends React.Component<{}, {}> {
     form: PersonFormState = new PersonFormState(new Promise(resolve => {
-        resolve(new Person({ FirstName: 'First', LastName: 'Last' }));
+        resolve(new Person({ FirstName: 'First', LastName: 'Last', Addresses: [
+            new Address({ StreetAddress1: '123 St.'}),
+            new Address({ StreetAddress1: 'abc st.' })
+        ] }));
     }));
 
     render() {
@@ -137,6 +144,16 @@ export class PersonForm extends React.Component<{}, {}> {
 
                     <TextInputField label="Street Address1" state={this.form.state.value.Address.value.StreetAddress1} />
                     <TextInputField label="Street Address2" state={this.form.state.value.Address.value.StreetAddress2} />
+
+                    {this.form.state.value.Addresses.value.map((address, i) => (
+                        <FormGroup>
+                            <Typography variant="title" gutterBottom>
+                                Address {i + 1}
+                            </Typography>
+                            <TextInputField label="Street Address1" state={address.value.StreetAddress1} />
+                            <TextInputField label="Street Address2" state={address.value.StreetAddress2} />
+                        </FormGroup>
+                    ))}
 
                     <Button variant="contained" color="primary" onClick={(e: any) => this.form.onSubmit()}>
                         Submit

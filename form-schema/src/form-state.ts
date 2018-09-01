@@ -110,6 +110,7 @@ function applyErrorsToFormState(result: any, input: InputState<any>) {
 export function deriveFormState<T>(input: T): FormState<T> {
     const runValidation = function(current: InputState<any>, form: FormState<T>): void {
         validate(form.model as any, current.path).then(result => {
+
             applyErrorsToFormState(result, form);
         });
     };
