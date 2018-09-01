@@ -7,7 +7,9 @@ import { deriveFormState, getFormModel, FormState, InputState } from './form-sta
 
 import { observable, autorun, action, runInAction, computed, intercept, observe, spy } from 'mobx';
 import { observer } from "mobx-react"
-import { FormGroup, FormLabel, FormControlLabel, TextField, Typography, Button } from '@material-ui/core';
+import { FormGroup, FormLabel, FormControlLabel, TextField, Typography, Button, FormHelperText } from '@material-ui/core';
+
+import { register } from './validation'
 
 const CityType = t.type({
     ID: t.number,
@@ -35,6 +37,24 @@ const PersonType = t.type({
 
 class Person extends tdc.DeriveClass(PersonType) {}
 
+var count = 0;
+
+register<Person>(Person, {
+    FirstName: [
+        (p) => p.FirstName.length > 8 ? "may not be longer than 8 characters!" : null, 
+        (p) => p.FirstName.length > 10 ? "may not be longer than 10 characters!" : null
+    ],
+    LastName: [
+        (p) => p.FirstName.length > 8 ? "First Name may not be longer than 8 characters!" : null, 
+        (p) => new Promise(resolve => {
+            count++;
+            setTimeout(function() {
+                resolve("There is always an error here count: " + count)
+            }, 3000);
+        })
+    ]
+})
+
 class PersonFormState {
     @observable state: FormState<Person>;
 
@@ -42,10 +62,6 @@ class PersonFormState {
         runInAction(() => {
             fetch.then(p => {
                 this.state = deriveFormState(p);
-                spy((change) => {
-                    //console.log(change);
-                    return change;
-                })
             })
         })
     }
@@ -68,6 +84,13 @@ type InputProps<T> = {
 
 @observer
 class TextInputField extends React.Component<InputProps<any>, {}> {
+    getErrorText(errors: string[]) {
+        if(errors.length === 0)
+            return null;
+        
+        return errors.map(e =><React.Fragment>{e}<br/></React.Fragment>);
+    }
+
     render() {
         let value = this.props.state.value;
         return (<React.Fragment>
@@ -77,9 +100,11 @@ class TextInputField extends React.Component<InputProps<any>, {}> {
                         label={this.props.label} 
                         value={value === null ? '' : value} 
                         onChange={(e: any) => this.props.state.onChange(e.target.value)}
-                        error={this.props.state.errors.length > 0}
+                        error={this.props.state.errors.length > 0 && this.props.state.dirty}
+                        helperText={this.props.state.dirty ? this.getErrorText(this.props.state.errors) : null}
                         required={this.props.state.required}
                     />
+                    
             </React.Fragment>);
     }
 }

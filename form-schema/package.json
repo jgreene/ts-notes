@@ -29,7 +29,8 @@
     "react-dom": "latest",
     "reflect-metadata": "^0.1.12",
     "ts-node": "^7.0.0",
-    "typescript": "^3.0.1"
+    "typescript": "^3.0.1",
+    "babel-polyfill": "latest"
   },
   "devDependencies": {
     "parcel-bundler": "^1.9.7"

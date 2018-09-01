@@ -6,6 +6,8 @@ import * as tdc from 'io-ts-derive-class'
 import { deriveFormState, FormState } from './form-state'
 import { observable, action, runInAction, computed } from 'mobx';
 
+import { register, validate } from './validation'
+
 const CityType = t.type({
     ID: t.number,
     Name: t.string
@@ -32,6 +34,10 @@ const PersonType = t.type({
 
 class Person extends tdc.DeriveClass(PersonType) {}
 
+register<Person>(Person, {
+    FirstName: (p) => p.FirstName.length > 8 ? "First Name may not be longer than 8 characters!" : null
+})
+
 class PersonFormState {
     constructor(public state: FormState<Person>){
 
@@ -40,6 +46,10 @@ class PersonFormState {
     @computed get FullName() {
         return this.state.value.FirstName.value + ' ' + this.state.value.LastName.value;
     }
+}
+
+function sleep(ms: number) {
+    return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 describe('Person formstate', () => {
@@ -106,5 +116,32 @@ describe('Person formstate', () => {
         expect(state.value.Addresses.path).eq('.Addresses');
         expect(state.value.Addresses.value[0].value.StreetAddress1.path).eq('.Addresses[0].StreetAddress1');
         expect(state.value.Addresses.value[1].value.StreetAddress1.path).eq('.Addresses[1].StreetAddress1');
-    })
+    });
+
+    it('Setting an invalid value updates errors in form state on next cycle', async () => {
+        let person = new Person({ FirstName: 'Test' });
+        const state = deriveFormState(person);
+
+        expect(state.value.FirstName.errors.length).eq(0);
+        
+        state.value.FirstName.onChange('ReallyLongInvalidName');
+        await sleep(1);
+        expect(state.value.FirstName.errors.length).eq(1);
+
+    });
+
+    it('Setting an valid value against an invalid value updates errors to empty on next cycle', async () => {
+        let person = new Person({ FirstName: 'Test' });
+        const state = deriveFormState(person);
+
+        expect(state.value.FirstName.errors.length).eq(0);
+        
+        state.value.FirstName.onChange('ReallyLongInvalidName');
+        await sleep(1);
+        expect(state.value.FirstName.errors.length).eq(1);
+
+        state.value.FirstName.onChange('Valid');
+        await sleep(1);
+        expect(state.value.FirstName.errors.length).eq(0);
+    });
 });

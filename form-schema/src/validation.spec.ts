@@ -48,9 +48,11 @@ register<Person>(Person, {
 
 register<PersonAddress>(PersonAddress, {
     StreetAddress1: (a) => a.StreetAddress1 == null || a.StreetAddress1.length < 1 ? "StreetAddress1 is required" : null,
+    StreetAddress2: (a) => a.StreetAddress2 == null || a.StreetAddress2.length < 1 ? "StreetAddress2 is required" : null,
 });
 
 describe('Can validate Person', () => {
+
     it('FirstName is required', async () => {
         const person = new Person();
         const result = await validate(person);
@@ -78,10 +80,8 @@ describe('Can validate Person', () => {
         const result = await validate(person);
         
         expect(result).to.have.property("Address");
-        if(result.Address && result.Address.StreetAddress1){
-            expect(result.Address.StreetAddress1).length(1);
-            expect(result.Address.StreetAddress1[0]).eq("StreetAddress1 is required");
-        }
+        expect(result.Address.StreetAddress1).length(1);
+        expect(result.Address.StreetAddress1[0]).eq("StreetAddress1 is required");
     });
 
     it('Must have at least one address', async () => {
@@ -118,12 +118,50 @@ describe('Can validate Person', () => {
         const person = new Person();
         person.SecondaryAddresses.push(new PersonAddress());
         const result = await validate(person);
-        
         expect(result).to.have.property("SecondaryAddresses");
         expect(result.SecondaryAddresses).length(1);
         if(result.SecondaryAddresses){
             expect(result.SecondaryAddresses.errors).length(1);
             expect(result.SecondaryAddresses.errors[0]).eq("First StreetAddress1 must equal Test");
         }
+    });
+
+    it('Valid path has empty errors array', async () => {
+        const person = new Person({ FirstName: 'Test' });
+        const result = await validate(person);
+
+        expect(result.FirstName.length).eq(0);
+    });
+
+    it('Use of validationPath only validates the given path', async () => {
+        const person = new Person();
+        const result = await validate(person, '.Address.StreetAddress2');
+        
+        expect(result).to.have.property("Address");
+        expect(result.FirstName).eq(undefined);
+        expect(result.Address.StreetAddress1).eq(undefined);
+        expect(result.Address.StreetAddress2).length(1);
+        expect(result.Address.StreetAddress2[0]).eq("StreetAddress2 is required");
+    });
+
+    it('Use of validationPath against array only validates a single entry in the array', async () => {
+        const person = new Person();
+        person.SecondaryAddresses.push(new PersonAddress());
+        person.SecondaryAddresses.push(new PersonAddress());
+        const result = await validate(person, '.SecondaryAddresses[0].StreetAddress1');
+        expect(result).to.have.property("SecondaryAddresses");
+        expect(result.SecondaryAddresses).length(1);
+        expect(result.SecondaryAddresses.errors).length(1);
+        expect(result.SecondaryAddresses.errors[0]).eq("First StreetAddress1 must equal Test");
+    });
+
+    it('primitive fields are validated with io-ts', async () => {
+        let id: any = 'Not a real ID';
+        const person = new Person();
+        person.ID = id;
+        const result = await validate(person);
+
+        expect(result.ID.length).eq(1);
+        expect(result.ID[0]).eq('Invalid value "Not a real ID" supplied to : number');
     });
 });

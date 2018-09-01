@@ -1,6 +1,20 @@
 
 import 'reflect-metadata'
 
+import * as t from 'io-ts'
+import * as tdc from 'io-ts-derive-class'
+import { PathReporter } from 'io-ts/lib/PathReporter'
+
+type primitive = string | number | boolean | null | undefined;
+
+function isPrimitive(input: any): input is primitive {
+    return typeof input === "string"
+        || typeof input === "boolean"
+        || typeof input === "number"
+        || input === null
+        || input === undefined;
+}
+
 type ValidatorResult = string | null | Promise<string | null>;
 
 const VALIDATION_METADATA_KEY = "VALIDATION_METADATA_KEY";
@@ -25,7 +39,8 @@ export function register<T>(
     klass: new (...args: any[]) => T,
     map: ValidationModel<T>
 ): void  {
-    const currentMap = getValidatorsFor<T>(klass);
+    const currentMap: any = getValidatorsFor<T>(klass);
+
     for(const prop in map) {
         const currentValidators = (currentMap[prop] || []) as Array<(model: T) => ValidatorResult>;
         const mapped = map[prop];
@@ -49,19 +64,29 @@ type ValidationArray<T> = Array<T> & {
 }
 
 export type ValidationResult<T> = {
-    [P in keyof T]: T[P] extends string ? string[] :
-                     T[P] extends number ? string[] :
-                     T[P] extends boolean ? string[] :
-                     T[P] extends undefined ? string[] :
-                     T[P] extends Array<infer U> ? ValidationArray<ValidationResult<U>> :
-                     ValidationResult<T[P]>;
+    [P in keyof T]: T[P] extends primitive ? string[] :
+                    T[P] extends Array<infer U> ? ValidationArray<ValidationResult<U>> :
+                    ValidationResult<T[P]>;
 }
 
-export async function validate<T>(model: T): Promise<ValidationResult<T>> {
+function isInValidationPath(currentPath: string, validationPath: string | null): boolean {
+    if(validationPath === null)
+    {
+        return true;
+    }
+
+    return validationPath.startsWith(currentPath);
+}
+
+export async function validate<T extends tdc.ITyped<any>>(model: T, validationPath: string | null = null, path: string = '.'): Promise<ValidationResult<T>> {
+    const result: any = {};
+    if(isPrimitive(model)){
+        return result;
+    }
+
     var target = model as any;
     target = target.prototype === undefined ? target.constructor : target;
     
-    const result: any = {};
     const add = (key: string, res: string | null) => {
         if(res === null)
             return;
@@ -87,6 +112,10 @@ export async function validate<T>(model: T): Promise<ValidationResult<T>> {
     const validators = getValidatorsFor<T>(target);
 
     for(const key in validators){
+        if(!isInValidationPath(path + key, validationPath))
+        {
+            continue;
+        }
         const propValue = model[key];
         const isArray = propValue instanceof Array;
         const propValidators = validators[key] as Array<(model: T) => ValidatorResult>;
@@ -104,36 +133,54 @@ export async function validate<T>(model: T): Promise<ValidationResult<T>> {
         }
     }
 
-    for(const prop in model) {
-        const propValue = model[prop];
-        if(propValue instanceof Array) {
-            var arrayRes: any = result[prop] || [];
+    const type = model.getType();
+    const propKeys = Object.keys(type.props);
+    for(var i = 0; i < propKeys.length; i++){
+        const key = propKeys[i];
+        if(!isInValidationPath(path + key, validationPath)) {
+            continue;
+        }
+        const prop = type.props[key] as t.Type<any>;
+        const tag = (prop as any)['_tag'];
+        const tagContains = (search: string) => tag && tag.length > 0 ? tag.indexOf(search) != -1 : false;
+        const propValue = (model as any)[key];
+        const current = result[key];
+        if(tag === "InterfaceType"){
+            const innerResult = await validate(propValue, validationPath, path + key + '.');
+            
+            if(current){
+                if(Object.keys(innerResult).length > 0){
+                    result[key] = Object.assign(current, innerResult);
+                }
+            }
+            else {
+                result[key] = innerResult;
+            }
+        }
+        else if(tagContains("ArrayType"))
+        {
+            var arrayRes: any = result[key] || [];
             for(var k = 0; k < propValue.length; k++){
                 const item = propValue[k];
-                const innerResult = await validate(item);
+                const innerResult = await validate(item, validationPath, path + key + '[' + k + ']' + '.');
                 if(Object.keys(innerResult).length > 0){
                     arrayRes.push(innerResult);
                 }
             }
-
-            if(arrayRes.length > 0){
-                if(!arrayRes.errors){
-                    arrayRes.errors = [];
-                };
-                result[prop] = arrayRes;
-            }
+            
+            if(!arrayRes.errors){
+                arrayRes.errors = [];
+            };
+            result[key] = arrayRes;
         }
-        else if(propValue.constructor) {
-            const innerResult = await validate(propValue);
-            if(Object.keys(innerResult).length > 0)
-            {
-                const current = result[prop];
-                if(current){
-                    result[prop] = Object.assign(current, innerResult);
-                }
-                else {
-                    result[prop] = innerResult;
-                }
+        else {
+            if(!current){
+                result[key] = [];
+            }
+
+            let decodeResult = prop.decode(propValue);
+            if(decodeResult.isLeft()){
+                PathReporter.report(decodeResult).forEach(o => add(key, o));
             }
         }
     }
