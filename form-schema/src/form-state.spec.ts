@@ -103,7 +103,7 @@ describe('Person formstate', () => {
         
         expect(model.Address.StreetAddress1).eq(street1);
         expect(person2.Address.StreetAddress1).eq(street1);
-    })
+    });
 
     it('Can get path for state', async () => {
         let address = new Address({ StreetAddress1: 'Test Street1'});

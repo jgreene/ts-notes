@@ -9,7 +9,7 @@ import { observable, runInAction, computed } from 'mobx';
 import { observer } from "mobx-react"
 import { FormGroup, FormLabel, FormControlLabel, TextField, Typography, Button, FormHelperText } from '@material-ui/core';
 
-import { register, required } from './validation'
+import { register, required, min, max } from './validation'
 
 const CityType = t.type({
     ID: t.number,
@@ -42,8 +42,8 @@ var count = 0;
 register<Person>(Person, {
     FirstName: [
         required(),
-        (p) => p.FirstName.length > 8 ? "may not be longer than 8 characters!" : null, 
-        (p) => p.FirstName.length > 10 ? "may not be longer than 10 characters!" : null
+        max(8),
+        max(10)
     ],
     LastName: [
         (p) => p.FirstName.length > 8 ? "First Name may not be longer than 8 characters!" : null, 

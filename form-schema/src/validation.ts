@@ -44,7 +44,32 @@ function getValidatorsFor<T>(klass: new (...args: any[]) => T) : ValidatorEntryP
     return Reflect.getMetadata(VALIDATION_METADATA_KEY, klass) as ValidatorEntryProps<T> || {};
 }
 
+type RequiredProps<T> = {
+    [P in keyof T]: boolean;
+}
+
+export function getRequiredFieldsFor<T>(klass: new (...args: any[]) => T) : RequiredProps<T> {
+    const classValidators = getValidatorsFor(klass);
+    var res: any = {};
+    for(var p in classValidators) {
+        var required = false;
+        var validators = classValidators[p];
+        if(validators !== undefined){
+            validators.forEach(v => {
+                if(isRequiredFieldValidator(v)){
+                    required = true;
+                }
+            })
+        }
+        
+        res[p] = required;
+    }
+
+    return res;
+}
+
 class RequiredValidator extends FieldValidator {
+    readonly isRequiredFieldValidator: boolean = true;
     constructor(public message: string) {
         super();
     }
@@ -62,7 +87,65 @@ class RequiredValidator extends FieldValidator {
     }
 }
 
+function isRequiredFieldValidator(input: any): input is RequiredValidator {
+    return input && input.isRequiredFieldValidator === true
+}
+
+class MinLengthValidator extends FieldValidator {
+    constructor(public min: number, public message: string | null = null){
+        super();
+    }
+
+    validate(value: any) {
+        if(value === null || value === undefined){
+            return null;
+        }
+
+        if(typeof value === "string"){
+            if(value.length < this.min) {
+                return this.message || 'must be at least ' + this.min + ' characters';
+            }
+        }
+
+        if(typeof value === "number"){
+            if(value < this.min){
+                return this.message || 'must be greater than ' + this.min;
+            }
+        }
+
+        return null;
+    }
+}
+
+class MaxLengthValidator extends FieldValidator {
+    constructor(public max: number, public message: string | null = null){
+        super();
+    }
+
+    validate(value: any) {
+        if(value === null || value === undefined){
+            return null;
+        }
+
+        if(typeof value === "string"){
+            if(value.length > this.max) {
+                return this.message || 'must be fewer than ' + this.max + ' characters';
+            }
+        }
+
+        if(typeof value === "number"){
+            if(value < this.max){
+                return this.message || 'must be less than ' + this.max;
+            }
+        }
+
+        return null;
+    }
+}
+
 export const required = (message: string = 'is required') => new RequiredValidator(message);
+export const min = (min: number, message: string | null = null) => new MinLengthValidator(min, message);
+export const max = (max: number, message: string | null = null) => new MaxLengthValidator(max, message);
 
 export function register<T>(
     klass: new (...args: any[]) => T,

@@ -5,7 +5,7 @@ import * as m from 'io-ts-derive-class';
 import * as t from 'io-ts';
 
 
-import { register, validate, required } from './validation'
+import { register, validate, required, getRequiredFieldsFor } from './validation'
 
 const PersonAddressType = t.type({
     StreetAddress1: t.string,
@@ -163,5 +163,12 @@ describe('Can validate Person', () => {
 
         expect(result.ID.length).eq(1);
         expect(result.ID[0]).eq('Invalid value "Not a real ID" supplied to : number');
+    });
+
+    it('Can get required fields map for person', async () => {
+        const fields = getRequiredFieldsFor(Person);
+        
+        expect(fields.FirstName).eq(true);
+        expect(fields.LastName).eq(false);
     });
 });

@@ -1,6 +1,6 @@
 import { observe, autorun, observable, action, runInAction, computed, reaction, extendObservable, intercept } from 'mobx';
 
-import { validate, ValidationResult } from './validation'
+import { validate, ValidationResult, getRequiredFieldsFor } from './validation'
 
 type primitive = string | number | boolean | null | undefined;
 
@@ -55,11 +55,11 @@ export type FormState<T> = InputState<FormStateType<T>> & IFormModel<T>
 
 export type Constructor<T = {}> = new (...args: any[]) => T;
 
-function getInputState(input: any, fireChange: Function, parent: any = null, path: string = ''): any
+function getInputState(input: any, fireChange: Function, parent: any = null, path: string = '', required: boolean = false): any
 {
     if(isPrimitive(input))
     {
-        return getInputStateImpl(input, fireChange, parent, path) as any;
+        return getInputStateImpl(input, fireChange, parent, path, required) as any;
     }
 
     if(input instanceof Array || Array.isArray(input))
@@ -70,10 +70,14 @@ function getInputState(input: any, fireChange: Function, parent: any = null, pat
 
     const keys = Object.keys(input);
     if(keys.length > 0){
+        const requiredFields: any = getRequiredFieldsFor(input.constructor);
+        const isRequiredField = (field: string) => requiredFields[field] === true;
+
         const record:any = {};
         keys.forEach(k => {
             const value: any = input[k];
-            record[k] = getInputState(value, fireChange, record, path + '.' + k);
+            const required = isRequiredField(k);
+            record[k] = getInputState(value, fireChange, record, path + '.' + k, required);
         });
 
         return getInputStateImpl(record, fireChange, parent, path) as any;
@@ -167,7 +171,7 @@ export function getFormModel<T>(state: FormState<T>): ModelState<T> {
     return getInputModel(state);
 }
 
-function getInputStateImpl<T>(input: T, fireChange: Function, parent: any, path: string): InputState<T> {
+function getInputStateImpl<T>(input: T, fireChange: Function, parent: any, path: string, required: boolean = false): InputState<T> {
     const errors: string[] = [];
     const run = (func: () => void) => {
         runInAction(func);
@@ -181,7 +185,7 @@ function getInputStateImpl<T>(input: T, fireChange: Function, parent: any, path:
         disabled: false,
         dirty: false,
         touched: false,
-        required: false,
+        required: required,
         path: path,
 
         setErrors(errors: string[]) {
