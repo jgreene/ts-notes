@@ -2,6 +2,8 @@ import * as React from 'react'
 
 import * as t from 'io-ts';
 import * as tdc from 'io-ts-derive-class'
+import { DateTime } from './datetime-type'
+import moment from 'moment'
 
 import { deriveFormState, FormState, InputState } from './form-state'
 
@@ -32,7 +34,8 @@ const PersonType = t.type({
     LastName: t.string,
     MiddleName: t.union([t.string, t.null]),
     Address: tdc.ref(Address),
-    Addresses: t.array(tdc.ref(Address))
+    Addresses: t.array(tdc.ref(Address)),
+    Birthdate: t.union([DateTime, t.null])
 });
 
 class Person extends tdc.DeriveClass(PersonType) {}
@@ -97,19 +100,61 @@ class TextInputField extends React.Component<InputProps<any>, {}> {
 
     render() {
         let value = this.props.state.value;
-        return (<React.Fragment>
-                    <TextField 
-                        disabled={this.props.state.disabled} 
-                        hidden={!this.props.state.visible}
-                        label={this.props.label} 
-                        value={value === null ? '' : value} 
-                        onChange={(e: any) => this.props.state.onChange(e.target.value)}
-                        error={this.props.state.errors.length > 0 && this.props.state.dirty}
-                        helperText={this.props.state.dirty ? this.getErrorText(this.props.state.errors) : null}
-                        required={this.props.state.required}
-                    />
-                    
-            </React.Fragment>);
+        return (<TextField 
+                    disabled={this.props.state.disabled} 
+                    hidden={!this.props.state.visible}
+                    label={this.props.label} 
+                    defaultValue={value === null ? '' : value} 
+                    onChange={(e: any) => this.props.state.onChange(e.target.value)}
+                    error={this.props.state.errors.length > 0 && this.props.state.dirty}
+                    helperText={this.props.state.dirty ? this.getErrorText(this.props.state.errors) : null}
+                    required={this.props.state.required}
+                />
+        );
+    }
+}
+
+@observer
+class DateInputField extends React.Component<InputProps<any>, {}> {
+    getErrorText(errors: string[]) {
+        if(errors.length === 0)
+            return null;
+        
+        return errors.map(e =><React.Fragment>{e}<br/></React.Fragment>);
+    }
+
+    onChange(e: any) {
+        const value = e.target.value;
+        if(value === null || value === '')
+        {
+            this.props.state.onChange(null);
+            return
+        }
+
+        const m = moment(value);
+        if(m.isValid())
+        {
+            this.props.state.onChange(m);
+        }
+    }
+
+    render() {
+        let value = this.props.state.value;
+        return (<TextField 
+                    disabled={this.props.state.disabled} 
+                    type='date'
+                    hidden={!this.props.state.visible}
+                    label={this.props.label} 
+                    defaultValue={value} 
+                    onChange={(e: any) => this.onChange(e)}
+                    error={this.props.state.errors.length > 0 && this.props.state.dirty}
+                    helperText={this.props.state.dirty ? this.getErrorText(this.props.state.errors) : null}
+                    required={this.props.state.required}
+                    InputLabelProps={{
+                        shrink: true,
+                    }}
+                />
+        );
     }
 }
 
@@ -142,11 +187,13 @@ export class PersonForm extends React.Component<{}, {}> {
                         {this.form.FullName}
                     </Typography>
 
+                    <DateInputField label="Birthdate" state={this.form.state.value.Birthdate} />
+
                     <TextInputField label="Street Address1" state={this.form.state.value.Address.value.StreetAddress1} />
                     <TextInputField label="Street Address2" state={this.form.state.value.Address.value.StreetAddress2} />
 
                     {this.form.state.value.Addresses.value.map((address, i) => (
-                        <FormGroup>
+                        <FormGroup key={address.path}>
                             <Typography variant="title" gutterBottom>
                                 Address {i + 1}
                             </Typography>

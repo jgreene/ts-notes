@@ -25,6 +25,7 @@
     "mobx": "^5.0.4",
     "mobx-react": "^5.2.5",
     "mocha": "^5.2.0",
+    "moment": "^2.22.2",
     "react": "latest",
     "react-dom": "latest",
     "reflect-metadata": "^0.1.12",

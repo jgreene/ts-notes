@@ -4,15 +4,17 @@ import 'reflect-metadata'
 import * as t from 'io-ts'
 import * as tdc from 'io-ts-derive-class'
 import { PathReporter } from 'io-ts/lib/PathReporter'
+import moment from 'moment';
 
-type primitive = string | number | boolean | null | undefined;
+type primitive = string | number | boolean | null | undefined | moment.Moment;
 
 function isPrimitive(input: any): input is primitive {
     return typeof input === "string"
         || typeof input === "boolean"
         || typeof input === "number"
         || input === null
-        || input === undefined;
+        || input === undefined
+        || moment.isMoment(input);
 }
 
 type ValidatorResult = string | null | Promise<string | null>;
@@ -176,6 +178,7 @@ type ValidationArray<T> = Array<T> & {
 
 export type ValidationResult<T> = {
     [P in keyof T]: T[P] extends primitive ? string[] :
+                    T[P] extends moment.Moment ? string[] :
                     T[P] extends Array<infer U> ? ValidationArray<ValidationResult<U>> :
                     ValidationResult<T[P]>;
 }
@@ -286,7 +289,7 @@ export async function validate<T extends tdc.ITyped<any>>(model: T, validationPa
             if(!current){
                 result[key] = [];
             }
-
+            
             let decodeResult = prop.decode(propValue);
             if(decodeResult.isLeft()){
                 PathReporter.report(decodeResult).forEach(o => add(key, o));

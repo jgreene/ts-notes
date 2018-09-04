@@ -5,6 +5,8 @@ import * as t from 'io-ts';
 import * as tdc from 'io-ts-derive-class'
 import { deriveFormState, FormState } from './form-state'
 import { observable, action, runInAction, computed } from 'mobx';
+import { DateTime } from './datetime-type'
+import moment from 'moment';
 
 import { register, validate } from './validation'
 
@@ -29,7 +31,8 @@ const PersonType = t.type({
     LastName: t.string,
     MiddleName: t.union([t.string, t.null]),
     Address: tdc.ref(Address),
-    Addresses: t.array(tdc.ref(Address))
+    Addresses: t.array(tdc.ref(Address)),
+    Birthdate: t.union([DateTime, t.null])
 });
 
 class Person extends tdc.DeriveClass(PersonType) {}
@@ -144,4 +147,18 @@ describe('Person formstate', () => {
         await sleep(1);
         expect(state.value.FirstName.errors.length).eq(0);
     });
+
+    it('Setting an valid birthdate results in no errors', async () => {
+        let person = new Person({ FirstName: 'Test' });
+        const state = deriveFormState(person);
+
+        expect(state.value.FirstName.errors.length).eq(0);
+        
+        let date: any = moment('2018-01-18');
+        state.value.Birthdate.onChange(date);
+        await sleep(1);
+        expect(state.value.Birthdate.errors.length).eq(0);
+    });
+
+    
 });

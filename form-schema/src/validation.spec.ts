@@ -3,7 +3,11 @@ import 'mocha';
 
 import * as m from 'io-ts-derive-class';
 import * as t from 'io-ts';
+import { DateTime } from './datetime-type'
+import moment from 'moment';
+import { PathReporter } from 'io-ts/lib/PathReporter'
 
+(moment as any).suppressDeprecationWarnings = true;
 
 import { register, validate, required, getRequiredFieldsFor } from './validation'
 
@@ -14,13 +18,16 @@ const PersonAddressType = t.type({
 
 class PersonAddress extends m.DeriveClass(PersonAddressType) {}
 
+const DateTimeOrNullType = t.union([DateTime, t.null]);
+
 const PersonType = t.type({
     ID: t.number,
     FirstName: t.string,
     LastName: t.string,
     Address: m.ref(PersonAddress),
     Addresses: t.array(m.ref(PersonAddress)),
-    SecondaryAddresses: t.array(m.ref(PersonAddress))
+    SecondaryAddresses: t.array(m.ref(PersonAddress)),
+    Birthdate: t.union([DateTime, t.null])
 })
 
 class Person extends m.DeriveClass(PersonType) {}
@@ -171,4 +178,34 @@ describe('Can validate Person', () => {
         expect(fields.FirstName).eq(true);
         expect(fields.LastName).eq(false);
     });
+
+    it('Setting an invalid Birthdate results in a validation error', async () => {
+        let person = new Person({ FirstName: 'Test' });
+        let bd: any = 'Invalid datetime';
+        person.Birthdate = bd;
+
+        const result = await validate(person);
+        
+        expect(result.Birthdate.length).eq(2);
+    });
+
+    it('Setting an valid Birthdate results in no validation errors', async () => {
+        let person = new Person({ FirstName: 'Test' });
+        let bd: any = '0002-01-12T05:50:36.000Z';
+        person.Birthdate = bd;
+
+        const result = await validate(person);
+        
+        expect(result.Birthdate.length).eq(0);
+    });
+
+    it('Can validate moment or null', async () => {
+        let bd: any = moment('0002-01-12T05:50:36.000Z');
+
+        let decodeResult = DateTimeOrNullType.decode(bd);
+        expect(decodeResult.isLeft()).eq(false);
+        if(decodeResult.isLeft()){
+            console.log(PathReporter.report(decodeResult));
+        }
+    })
 });

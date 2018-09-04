@@ -1,15 +1,17 @@
 import { observe, autorun, observable, action, runInAction, computed, reaction, extendObservable, intercept } from 'mobx';
 
 import { validate, ValidationResult, getRequiredFieldsFor } from './validation'
+import moment from 'moment';
 
-type primitive = string | number | boolean | null | undefined;
+type primitive = string | number | boolean | null | undefined | moment.Moment;
 
 function isPrimitive(input: any): input is primitive {
     return typeof input === "string"
         || typeof input === "boolean"
         || typeof input === "number"
         || input === null
-        || input === undefined;
+        || input === undefined
+        || moment.isMoment(input);
 }
 
 export type InputState<TValue> = {
