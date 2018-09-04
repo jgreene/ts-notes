@@ -9,7 +9,7 @@ import { deriveFormState, FormState, InputState } from './form-state'
 
 import { observable, runInAction, computed } from 'mobx';
 import { observer } from "mobx-react"
-import { FormGroup, FormLabel, FormControlLabel, TextField, Typography, Button, FormHelperText } from '@material-ui/core';
+import { FormGroup, FormLabel, FormControlLabel, TextField, Typography, Button } from '@material-ui/core';
 
 import { register, required, min, max } from './validation'
 
@@ -56,7 +56,8 @@ register<Person>(Person, {
                 resolve("There is always an error here count: " + count)
             }, 3000);
         })
-    ]
+    ],
+    Birthdate: (p) => p.Birthdate != null && p.Birthdate.isAfter(moment('01/01/2018', 'MM/DD/YYYY').add(-1, "day")) ? 'Cannot be born this year' : null
 });
 
 register<Address>(Address, {
@@ -100,7 +101,7 @@ class TextInputField extends React.Component<InputProps<any>, {}> {
 
     render() {
         let value = this.props.state.value;
-        return (<TextField 
+        return (<TextField key={this.props.state.path}
                     disabled={this.props.state.disabled} 
                     hidden={!this.props.state.visible}
                     label={this.props.label} 
@@ -131,7 +132,7 @@ class DateInputField extends React.Component<InputProps<any>, {}> {
             return
         }
 
-        const m = moment(value);
+        const m = moment(value, 'YYYY-MM-DD');
         if(m.isValid())
         {
             this.props.state.onChange(m);
@@ -140,7 +141,7 @@ class DateInputField extends React.Component<InputProps<any>, {}> {
 
     render() {
         let value = this.props.state.value;
-        return (<TextField 
+        return (<TextField key={this.props.state.path}
                     disabled={this.props.state.disabled} 
                     type='date'
                     hidden={!this.props.state.visible}
@@ -161,10 +162,12 @@ class DateInputField extends React.Component<InputProps<any>, {}> {
 @observer
 export class PersonForm extends React.Component<{}, {}> {
     form: PersonFormState = new PersonFormState(new Promise(resolve => {
-        resolve(new Person({ FirstName: 'First', LastName: 'Last', Addresses: [
-            new Address({ StreetAddress1: '123 St.'}),
-            new Address({ StreetAddress1: 'abc st.' })
-        ] }));
+        setTimeout(() => {
+            resolve(new Person({ FirstName: 'First', LastName: 'Last', Addresses: [
+                new Address({ StreetAddress1: '123 St.'}),
+                new Address({ StreetAddress1: 'abc st.' })
+            ] }));
+        }, 100);
     }));
 
     render() {

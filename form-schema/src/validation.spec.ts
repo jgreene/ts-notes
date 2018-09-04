@@ -3,7 +3,6 @@ import 'mocha';
 
 import * as m from 'io-ts-derive-class';
 import * as t from 'io-ts';
-import { DateTime } from './datetime-type'
 import moment from 'moment';
 import { PathReporter } from 'io-ts/lib/PathReporter'
 
@@ -18,7 +17,7 @@ const PersonAddressType = t.type({
 
 class PersonAddress extends m.DeriveClass(PersonAddressType) {}
 
-const DateTimeOrNullType = t.union([DateTime, t.null]);
+const DateTimeOrNullType = t.union([m.DateTime, t.null]);
 
 const PersonType = t.type({
     ID: t.number,
@@ -27,7 +26,7 @@ const PersonType = t.type({
     Address: m.ref(PersonAddress),
     Addresses: t.array(m.ref(PersonAddress)),
     SecondaryAddresses: t.array(m.ref(PersonAddress)),
-    Birthdate: t.union([DateTime, t.null])
+    Birthdate: t.union([m.DateTime, t.null])
 })
 
 class Person extends m.DeriveClass(PersonType) {}

@@ -5,7 +5,6 @@ import * as t from 'io-ts';
 import * as tdc from 'io-ts-derive-class'
 import { deriveFormState, FormState } from './form-state'
 import { observable, action, runInAction, computed } from 'mobx';
-import { DateTime } from './datetime-type'
 import moment from 'moment';
 
 import { register, validate } from './validation'
@@ -32,7 +31,7 @@ const PersonType = t.type({
     MiddleName: t.union([t.string, t.null]),
     Address: tdc.ref(Address),
     Addresses: t.array(tdc.ref(Address)),
-    Birthdate: t.union([DateTime, t.null])
+    Birthdate: t.union([tdc.DateTime, t.null])
 });
 
 class Person extends tdc.DeriveClass(PersonType) {}
