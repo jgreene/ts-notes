@@ -5,13 +5,14 @@ import * as tdc from 'io-ts-derive-class'
 import { DateTime } from './datetime-type'
 import moment from 'moment'
 
-import { deriveFormState, FormState, InputState } from './form-state'
+import { deriveFormState, FormState, InputState } from 'formstate-inator'
 
-import { observable, runInAction, computed } from 'mobx';
+import { observable, runInAction, computed, action } from 'mobx';
 import { observer } from "mobx-react"
 import { FormGroup, FormLabel, FormControlLabel, TextField, Typography, Button } from '@material-ui/core';
+import { TextFieldProps } from '@material-ui/core/TextField'
 
-import { register, required, min, max } from './validation'
+import { register, required, min, max } from 'validator-inator'
 
 const CityType = t.type({
     ID: t.number,
@@ -57,7 +58,10 @@ register<Person>(Person, {
             }, 3000);
         })
     ],
-    Birthdate: (p) => p.Birthdate != null && p.Birthdate.isAfter(moment('01/01/2018', 'MM/DD/YYYY').add(-1, "day")) ? 'Cannot be born this year' : null
+    Birthdate: [
+        required(),
+        (p) => p.Birthdate != null && p.Birthdate.isAfter(moment('01/01/2018', 'MM/DD/YYYY').add(-1, "day")) ? 'Cannot be born this year' : null
+    ]
 });
 
 register<Address>(Address, {
@@ -88,42 +92,49 @@ class PersonFormState {
 type InputProps<T> = {
     label: string;
     state: InputState<T>
+} & Pick<TextFieldProps, Exclude<keyof TextFieldProps, keyof {
+    key: any;
+    disabled: any;
+    hidden: any;
+    label: any;
+    defaultValue: any;
+    onChange: any;
+    onBlur: any;
+    error: any;
+    helperText: any;
+    required: any;
+}>>
+
+function getErrorText(errors: string[]) {
+    if(errors.length === 0)
+        return null;
+    
+    return errors.map(e =><React.Fragment key={e}>{e}<br/></React.Fragment>);
 }
 
 @observer
 class TextInputField extends React.Component<InputProps<any>, {}> {
-    getErrorText(errors: string[]) {
-        if(errors.length === 0)
-            return null;
-        
-        return errors.map(e =><React.Fragment>{e}<br/></React.Fragment>);
-    }
-
     render() {
-        let value = this.props.state.value;
-        return (<TextField key={this.props.state.path}
-                    disabled={this.props.state.disabled} 
-                    hidden={!this.props.state.visible}
-                    label={this.props.label} 
+        let { label, state, ...rest } = this.props;
+        let value = state.value;
+        return (<TextField key={state.path}
+                    disabled={state.disabled} 
+                    hidden={!state.visible}
+                    label={label} 
                     defaultValue={value === null ? '' : value} 
-                    onChange={(e: any) => this.props.state.onChange(e.target.value)}
-                    error={this.props.state.errors.length > 0 && this.props.state.dirty}
-                    helperText={this.props.state.dirty ? this.getErrorText(this.props.state.errors) : null}
-                    required={this.props.state.required}
+                    onChange={(e: any) => state.onChange(e.target.value)}
+                    onBlur={(e:any) => state.validate()}
+                    error={state.errors.length > 0}
+                    helperText={getErrorText(state.errors)}
+                    required={state.required}
+                    {...rest}
                 />
         );
     }
 }
 
 @observer
-class DateInputField extends React.Component<InputProps<any>, {}> {
-    getErrorText(errors: string[]) {
-        if(errors.length === 0)
-            return null;
-        
-        return errors.map(e =><React.Fragment>{e}<br/></React.Fragment>);
-    }
-
+class DateInputField extends React.Component<InputProps<moment.Moment | null>, {}> {
     onChange(e: any) {
         const value = e.target.value;
         if(value === null || value === '')
@@ -140,20 +151,24 @@ class DateInputField extends React.Component<InputProps<any>, {}> {
     }
 
     render() {
-        let value = this.props.state.value;
-        return (<TextField key={this.props.state.path}
-                    disabled={this.props.state.disabled} 
+        let { label, state, ...rest } = this.props;
+        const value = state.value;
+        const defaultValue = moment.isMoment(value) ? value.format('YYYY-MM-DD') : '';
+        return (<TextField key={state.path}
+                    disabled={state.disabled} 
                     type='date'
-                    hidden={!this.props.state.visible}
-                    label={this.props.label} 
-                    defaultValue={value} 
+                    hidden={!state.visible}
+                    label={label} 
+                    defaultValue={defaultValue} 
                     onChange={(e: any) => this.onChange(e)}
-                    error={this.props.state.errors.length > 0 && this.props.state.dirty}
-                    helperText={this.props.state.dirty ? this.getErrorText(this.props.state.errors) : null}
-                    required={this.props.state.required}
+                    onBlur={(e:any) => state.validate()}
+                    error={state.errors.length > 0}
+                    helperText={getErrorText(state.errors)}
+                    required={state.required}
                     InputLabelProps={{
                         shrink: true,
                     }}
+                    {...rest}
                 />
         );
     }
@@ -163,7 +178,7 @@ class DateInputField extends React.Component<InputProps<any>, {}> {
 export class PersonForm extends React.Component<{}, {}> {
     form: PersonFormState = new PersonFormState(new Promise(resolve => {
         setTimeout(() => {
-            resolve(new Person({ FirstName: 'First', LastName: 'Last', Addresses: [
+            resolve(new Person({ FirstName: 'First', LastName: 'Last', Birthdate: moment('2017-01-20', 'YYYY-MM-DD'), Addresses: [
                 new Address({ StreetAddress1: '123 St.'}),
                 new Address({ StreetAddress1: 'abc st.' })
             ] }));
@@ -178,9 +193,6 @@ export class PersonForm extends React.Component<{}, {}> {
         return (
             <form onSubmit={this.form.onSubmit} noValidate>
                 <FormGroup>
-                    <Typography variant="title" gutterBottom>
-                        Person Form
-                    </Typography>
 
                     <TextInputField label="First Name" state={this.form.state.value.FirstName} />
                     <TextInputField label="Last Name" state={this.form.state.value.LastName} />

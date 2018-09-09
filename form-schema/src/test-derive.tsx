@@ -4,8 +4,6 @@ import { DynamicForm } from './dynamic-form'
 
 import { deriveFormSchema, Entity, Field } from './derive'
 
-import { register } from './validation'
-
 import * as t from 'io-ts'
 import * as tdc from 'io-ts-derive-class'
 
