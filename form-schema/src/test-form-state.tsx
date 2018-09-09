@@ -133,8 +133,25 @@ class TextInputField extends React.Component<InputProps<any>, {}> {
     }
 }
 
+type DateInputProps = InputProps<moment.Moment | null> & {
+    type: 'date' | 'datetime-local';
+}
+
 @observer
-class DateInputField extends React.Component<InputProps<moment.Moment | null>, {}> {
+class DateInputField extends React.Component<DateInputProps, {}> {
+    get format(): string {
+        if(this.props.type === "date")
+        {
+            return moment.HTML5_FMT.DATE;
+        }
+        else if(this.props.type === "datetime-local")
+        {
+            return moment.HTML5_FMT.DATETIME_LOCAL;
+        }
+
+        return moment.HTML5_FMT.DATETIME_LOCAL;
+    }
+
     onChange(e: any) {
         const value = e.target.value;
         if(value === null || value === '')
@@ -143,7 +160,7 @@ class DateInputField extends React.Component<InputProps<moment.Moment | null>, {
             return
         }
 
-        const m = moment(value, 'YYYY-MM-DD');
+        const m = moment(value, this.format);
         if(m.isValid())
         {
             this.props.state.onChange(m);
@@ -151,12 +168,12 @@ class DateInputField extends React.Component<InputProps<moment.Moment | null>, {
     }
 
     render() {
-        let { label, state, ...rest } = this.props;
+        let { type, label, state, ...rest } = this.props;
         const value = state.value;
-        const defaultValue = moment.isMoment(value) ? value.format('YYYY-MM-DD') : '';
+        const defaultValue = moment.isMoment(value) ? value.format(this.format) : '';
         return (<TextField key={state.path}
                     disabled={state.disabled} 
-                    type='date'
+                    type={type}
                     hidden={!state.visible}
                     label={label} 
                     defaultValue={defaultValue} 
@@ -202,7 +219,7 @@ export class PersonForm extends React.Component<{}, {}> {
                         {this.form.FullName}
                     </Typography>
 
-                    <DateInputField label="Birthdate" state={this.form.state.value.Birthdate} />
+                    <DateInputField label="Birthdate" type="date" state={this.form.state.value.Birthdate} />
 
                     <TextInputField label="Street Address1" state={this.form.state.value.Address.value.StreetAddress1} />
                     <TextInputField label="Street Address2" state={this.form.state.value.Address.value.StreetAddress2} />
@@ -217,7 +234,13 @@ export class PersonForm extends React.Component<{}, {}> {
                         </FormGroup>
                     ))}
 
-                    <Button variant="contained" color="primary" onClick={(e: any) => this.form.onSubmit()}>
+                    <Button 
+                        variant="contained" 
+                        color="primary" 
+                        onClick={(e: any) => this.form.onSubmit()}
+                        disabled={!this.form.state.dirty}
+                        
+                        >
                         Submit
                     </Button>
 
