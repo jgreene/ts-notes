@@ -23,8 +23,10 @@ GraphQL:
 * https://github.com/atomicobject/ts-react-graphql-starter-kit/blob/master/package.json
 * https://medium.com/@shemseddine/setup-a-graphql-api-using-asp-net-core-79f1b88f6ad8
 
-ORM:
+Databases:
 * https://github.com/typeorm/typeorm
+* https://github.com/hediet/ts-typed-sql
+* https://github.com/rmp135/sql-ts
 
 Forms:
 * https://www.npmjs.com/package/formstate
