@@ -32,3 +32,9 @@ Forms:
 * https://www.npmjs.com/package/formstate
 * https://github.com/gcanti/tcomb-form
 
+Testing:
+* https://github.com/danibram/mocker-data-generator
+* https://mochajs.org/
+* http://www.chaijs.com/
+
+
