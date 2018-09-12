@@ -37,4 +37,7 @@ Testing:
 * https://mochajs.org/
 * http://www.chaijs.com/
 
+React:
+* https://github.com/acdlite/recompose
+
 
